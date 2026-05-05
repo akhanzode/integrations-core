@@ -78,15 +78,6 @@ include = ["src"]
 python-version = "3.13"
 scripts = ["ddev"]
 
-# Keep Black configuration to generate models through validate
-# Switch to Ruff after it provides a Python API
-[tool.black]
-include = '\.pyi?$'
-line-length = 120
-skip-string-normalization = true
-target-version = ["py313"]
-extend-exclude = "src/ddev/_version.py"
-
 [tool.ruff]
 extend = "../pyproject.toml"
 exclude = []
