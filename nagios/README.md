@@ -116,9 +116,7 @@ Configure Nagios notification commands to forward notifications to the Datadog e
 | `CRITICAL`, `DOWN` | `alert`          | `error`        | Pages the configured On-Call team                 |
 | `WARNING`          | `alert`          | `warn`         | Pages the configured On-Call team                 |
 | `OK`, `UP`         | `alert`          | `ok`           | Resolves the page with the same `aggregation_key` |
-| `UNKNOWN`          | `change`         | _n/a_          | Sends a non-paging informational event            |
-
-To page on `UNKNOWN` instead, change its mapping in the script.
+| `UNKNOWN`          | `alert`          | `warn`         | Pages the configured On-Call team                 |
 
 ### Setup
 
@@ -144,10 +142,10 @@ ONCALL_TEAM="${4}"  # Datadog On-Call team handle, for example, "ops"
 OUTPUT="${5}"
 
 case "$STATE" in
-  CRITICAL|DOWN) CATEGORY="alert"; STATUS="error" ;;
-  WARNING)       CATEGORY="alert"; STATUS="warn"  ;;
-  OK|UP)         CATEGORY="alert"; STATUS="ok"    ;;
-  *)             CATEGORY="change"; STATUS=""     ;;
+  CRITICAL|DOWN) STATUS="error" ;;
+  WARNING)       STATUS="warn"  ;;
+  OK|UP)         STATUS="ok"    ;;
+  *)             STATUS="warn"  ;;
 esac
 
 TITLE_JSON=$(printf 'Nagios: %s / %s is %s' "$NAGIOS_HOST" "$SERVICEDESC" "$STATE" \
@@ -155,20 +153,14 @@ TITLE_JSON=$(printf 'Nagios: %s / %s is %s' "$NAGIOS_HOST" "$SERVICEDESC" "$STAT
 MESSAGE_JSON=$(printf '%s' "$OUTPUT" \
   | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
 
-if [ "$CATEGORY" = "alert" ]; then
-  ATTRS_JSON="{\"status\": \"$STATUS\"}"
-else
-  ATTRS_JSON="{}"
-fi
-
 PAYLOAD=$(cat <<EOF
 {
-  "category": "$CATEGORY",
+  "category": "alert",
   "title": $TITLE_JSON,
   "message": $MESSAGE_JSON,
   "aggregation_key": "nagios:${NAGIOS_HOST}:${SERVICEDESC}",
   "tags": ["integration:nagios", "host:${NAGIOS_HOST}", "service:${SERVICEDESC}"],
-  "attributes": $ATTRS_JSON
+  "attributes": {"status": "$STATUS"}
 }
 EOF
 )
